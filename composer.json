@@ -1,0 +1,23 @@
+{
+    "name": "kennofizet/email-internal",
+    "autoload": {
+        "psr-4": {
+            "Package\\Kennofizet\\EmailInternal\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Kenno Fizet",
+            "email": "kennofizetreal@gmail.com"
+        }
+    ],
+    "require": {},
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Package\\Kennofizet\\EmailInternal\\Providers\\PackageServiceProvider"
+            ],
+            "aliases": {}
+        }
+    }
+}
