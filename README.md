@@ -25,7 +25,11 @@ use :
   $model->mail_delete(id_mail)
   example:
     + $model_user->mail_delete(12);
-  *delete just change content, subject to text "Mail deleted"", file to null and status to 99*
+  *delete just change status to 99*
+  
+  //revert mail
+  $model->mail_revert(id_mail)
+  $model->mail_revert(array_mail)//[id1,id4,..]
   
   //delete all mail this user send and receiver
   $model->mail_delete_force()
