@@ -36,4 +36,8 @@ use :
   //read and unread mail
   $model->mail_read(id_mail)
   $model->mail_unread(id_mail)
+  
+  //show data
+  $model->mail(mail_id)
+  $model->mails(perpage,page)
   ```
