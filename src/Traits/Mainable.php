@@ -93,17 +93,66 @@ trait MainAble
     public function mail_delete($id_mail)
     {
         $new_message = [];
-        if ($this->is_sender($id_mail)) {
-            $update = EmailInternal::find($id_mail);
-            $update->content = "Mail deleted";
-            $update->subject = "Mail deleted";
-            $update->file = "";
-            $update->update();
+        $id_mail_type = gettype($id_mail);
+        if ($id_mail_type == "string" or $id_mail_type == "integer") {
+            if ($this->is_sender($id_mail)) {
+                $update = EmailInternal::find($id_mail);
+                $update->status = 99;
+                $update->update();
 
-            $new_message[] = "done";
-        }else{
-            $new_message[] = "!is_sender";
+                $new_message[] = "done";
+            }else{
+                $new_message[] = "!is_sender";
+            }
         }
+
+        if ($id_mail_type == "array") {
+            for ($i=0; $i < sizeof($id_mail); $i++) { 
+                if ($this->is_sender($id_mail[$i])) {
+                    $update = EmailInternal::find($id_mail[$i]);
+                    $update->status = 99;
+                    $update->update();
+
+                    $new_message[] = "done";
+                }else{
+                    $new_message[] = "!is_sender";
+                }
+            }
+        }
+        
+        return $new_message;
+    }
+
+    public function mail_revert($id_mail)
+    {
+        $new_message = [];
+        $id_mail_type = gettype($id_mail);
+        if ($id_mail_type == "string" or $id_mail_type == "integer") {
+            if ($this->is_sender($id_mail)) {
+                $update = EmailInternal::find($id_mail);
+                $update->status = 1;
+                $update->update();
+
+                $new_message[] = "done";
+            }else{
+                $new_message[] = "!is_sender";
+            }
+        }
+
+        if ($id_mail_type == "array") {
+            for ($i=0; $i < sizeof($id_mail); $i++) { 
+                if ($this->is_sender($id_mail[$i])) {
+                    $update = EmailInternal::find($id_mail[$i]);
+                    $update->status = 1;
+                    $update->update();
+
+                    $new_message[] = "done";
+                }else{
+                    $new_message[] = "!is_sender";
+                }
+            }
+        }
+        
         return $new_message;
     }
 
@@ -117,10 +166,7 @@ trait MainAble
             $new_message[] = "data_null";
         }
         foreach ($update_sender as $detail_update_sender) {
-            $detail_update_sender->content = "Mail deleted";
-            $detail_update_sender->subject = "Mail deleted";
             $detail_update_sender->status = 99;
-            $detail_update_sender->file = "";
             $detail_update_sender->update();
             $new_message[] = "done";
         }
