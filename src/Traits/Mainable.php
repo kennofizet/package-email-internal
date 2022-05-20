@@ -77,7 +77,7 @@ trait MainAble
     public function mail_uploads($id_mail,$files)
     {
         $new_message = [];
-        $check_mail = $this->checkMailFound($id_mail);
+        $check_mail = $this->is_sender($id_mail);
         if ($check_mail) {
             $disk = config('email_internal.disk');
             $path_new = $this->new_path($this->id,$id_mail);
