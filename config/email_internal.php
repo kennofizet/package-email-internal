@@ -1,7 +1,10 @@
 <?php
     return [
         "file"=>[
-            "extension" => ['JPG','JPEG','PNG','GIF','jpg','jpeg','png','gif','docx','txt','pdf','xls']
-        ]
+            "extension" => ['jpg','jpeg','png','gif','docx','txt','pdf','xls']
+        ],
+        "disk" => "public",
+        "path_folder" => "email_internal",
+        "key" => "AbcXyzzzz"
     ];
 ?>

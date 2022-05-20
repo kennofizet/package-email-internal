@@ -3,9 +3,13 @@
 namespace Package\Kennofizet\EmailInternal\Traits;
 
 use Package\Kennofizet\EmailInternal\Model\EmailInternal;
+use Package\Kennofizet\EmailInternal\Model\EmailInternalGallery;
+use Package\Kennofizet\EmailInternal\Model\EmailInternalGalleryShare;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-
+use Carbon\Carbon;
+use Validator;
+use Storage;
 
 trait MainAble
 {
@@ -53,12 +57,233 @@ trait MainAble
 
     }
 
+    public function mail_update_file($id_mail,$file)
+    {
+        $new_message = [];
+        if ($this->is_sender_receiver($id_mail)) {
+            $mail = EmailInternal::find($id_mail);
+
+            $mail->file = $file;
+            $mail->update();
+
+            $new_message[] = "done";
+
+        }else{
+            $new_message[] = "!is_sender_receiver";
+        }
+        return $new_message;
+    }
+
+    public function mail_uploads($id_mail,$files)
+    {
+        $new_message = [];
+        $check_mail = $this->checkMailFound($id_mail);
+        if ($check_mail) {
+            $disk = config('email_internal.disk');
+            $path_new = $this->new_path($this->id,$id_mail);
+
+            $i = 0;
+            if(!empty($files)){
+                foreach($files as $file){
+                    $imageName = $this->new_name_image($file,$path_new);
+                    $new_message[] = $this->storeFileMail($file,$path_new,$imageName,$disk,$id_mail);
+                    $i++;
+                }
+            }else{
+                $new_message[] = "where_is_file";
+            }
+        }else{
+            $new_message[] = "mail_not_found";
+        }
+
+        return $new_message;
+    }
+
+    public function canViewFile($path)
+    {
+        $gallery_check = EmailInternalGallery::where('path',$path)->first();
+        if ($gallery_check) {
+            $mail_id = $gallery_check->mail_id;
+            $mail_get = EmailInternal::find($mail_id);
+            if($mail_get){
+                if ($this->is_sender_receiver($mail_id)) {
+                    return true;
+                }else{
+                    return false;
+                }
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
+
+    public function canEditFile($path)
+    {
+        $gallery_check = EmailInternalGallery::where('path',$path)->first();
+        if ($gallery_check) {
+            $mail_id = $gallery_check->mail_id;
+            $mail_get = EmailInternal::find($mail_id);
+            if($mail_get){
+                if ($this->is_sender($mail_id)) {
+                    return true;
+                }else{
+                    return false;
+                }
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
+
+    public function checkMailFound($id_mail)
+    {
+        $check_mail = EmailInternal::find($id_mail);
+
+        if (!empty($check_mail)) {
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    public function storeFileMail($fileUploaded,$folder,$new_name_file,$disk,$id_mail)
+    {
+        $folder = $folder;
+        $rules = array('file' => 'required|mimes:'.implode(',',config('email_internal.file.extension')));
+        
+        $validator = Validator::make(array('file' => $fileUploaded), $rules);
+
+        if($validator->passes())
+        {
+            // dd($new_name_file);
+
+            //* quitar / si falla
+            // $upload_success = $fileUploaded->move($folder, $new_name_file);
+
+            Storage::disk($disk)->putFileAs(
+                $folder,
+                $fileUploaded,
+                $new_name_file
+            );
+
+            $file_new_url = $folder.'/'.$new_name_file;
+
+
+            $fileProperties = $this->fileProperties($file_new_url,$disk);
+            // dd($fileProperties);
+            $new_gallery = new EmailInternalGallery;
+            $new_gallery->type = $fileProperties['type'];
+            $new_gallery->path = $fileProperties['path'];
+            $new_gallery->timestamp = $fileProperties['timestamp'];
+            $new_gallery->basename = $fileProperties['basename'];
+            $new_gallery->dirname = $fileProperties['dirname'];
+            $new_gallery->size = $fileProperties['size'];
+            $new_gallery->extension = $fileProperties['extension'];
+            $new_gallery->filename = $fileProperties['filename'];
+
+            $new_gallery->status = 2;
+            $new_gallery->mail_id = $id_mail;
+            $new_gallery->save();
+
+            // $this->shareFileMail($id_mail,$new_gallery->id);
+
+            return "done";
+            
+        }
+    }
+
+    public function shareFileMail($id_mail,$gallery_id)
+    {
+        $mail = EmailInternal::find($id_mail);
+        // $new_share = new EmailInternalGalleryShare;
+        // $new_share->id_file = $gallery_id;
+
+    }
+
+
+    public function fileProperties($path = null,$disk)
+    {
+        $file = Storage::disk($disk)->getMetadata($path);
+
+        $pathInfo = pathinfo($path);
+
+        $file['basename'] = $pathInfo['basename'];
+        $file['dirname'] = $pathInfo['dirname'] === '.' ? ''
+            : $pathInfo['dirname'];
+        $file['extension'] = isset($pathInfo['extension'])
+            ? $pathInfo['extension'] : '';
+        $file['filename'] = $pathInfo['filename'];
+
+        return $this->aclFilter($disk, [$file])[0];
+
+    }
+    // public function getAcl(): bool;
+    public function aclFilter($disk, $content)
+    {
+
+        $withAccess = array_map(function ($item) use ($disk) {
+            // add acl access level
+
+            return $item;
+        }, $content);
+
+        return $withAccess;
+    }
+
+    public function new_name_image($file,$folder,$number="1")
+    {
+        $originalFileName = $file->getClientOriginalName();
+        $fileName = pathinfo($originalFileName, PATHINFO_FILENAME);
+        $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+
+        // dd($fileName);
+
+        $linkFilenameTemp = strtolower(time(). date("Y_m") . $number  . $fileName);
+        // dd($linkFilenameTemp);
+
+
+        $linkFilename = $linkFilenameTemp.'.'.$fileExtension;
+
+        $i = 1;
+        while(file_exists($folder.'/'.$linkFilename))
+        {
+            $linkFilename = $i."_".time(). date("Y_m").$linkFilename;
+            $i++;
+        }
+
+
+        return $linkFilename;
+    }
+
+    public function new_path($id_user,$id_mail,$randomLength=15)
+    {
+        
+        $token = '';
+        do {
+            $bytes = random_bytes($randomLength);
+            $token .= str_replace(
+                ['.','/','='], 
+                '',
+                base64_encode($bytes)
+            );
+        } while (strlen($token) < $randomLength);
+
+        $new_path = $this->id.'/'.config('email_internal.path_folder').'/'.$token."/".$id_mail.date("Y-m")."/";
+        return $new_path;
+
+    }
+
     public function mailto($receiver,$content,$subject,$file,$model_receiver="",$colunm_model="id")
     {
         $new_message = [];
         $type_receiver = gettype($receiver);
         // dd($type_receiver);
         $model_sender = (string)get_class($this);
+        // dd($model_sender);
         if (!empty($model_receiver)) {}else{
             $model_receiver = $model_sender;
         }
@@ -301,12 +526,12 @@ trait MainAble
                 $new_mail->sender_read = 1;
                 $new_mail->receiver_read = 1;
                 $new_mail->save();
-                return "done";
+                return ["message" => "done", "mail_id" => $new_mail->id];
             }else{
-                return "receiver_not_found";
+                return ["message" => "receiver_not_found"];
             }
         }else{
-            return "model_not_found";
+            return ["message" => "model_not_found"];
         }
     }
 
