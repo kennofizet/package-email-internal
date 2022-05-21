@@ -18,8 +18,8 @@ class CreateEmailInternal extends Migration
             $table->longText('subject');
             $table->longText('content');
             $table->longText('file')->nullable();
-            $table->string('model_sender',255);
-            $table->string('model_receiver',255);
+            $table->string('sender_type',255);
+            $table->string('receiver_type',255);
             $table->bigInteger('sender_id');
             $table->bigInteger('receiver_id');
             $table->tinyInteger('status')->default(1);

@@ -40,13 +40,4 @@ use :
   //show data
   $model->mail(mail_id)
   $model->mails(perpage,page)
-  
-  //check
-  $model->canViewFile($path) //check model is sender or receiver with path file in mail
-  $model->is_sender($id_mail)
-  $model->is_sender_receiver(id_mail) // sender or receiver 
-  $model->canEditFile($path) // sender only
-  $model->checkMailFound() // with non model sender and receiver
-  $model->mail_uploads($id_mail,$files)
-  
   ```

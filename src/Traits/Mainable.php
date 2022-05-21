@@ -8,8 +8,11 @@ use Package\Kennofizet\EmailInternal\Model\EmailInternalGalleryShare;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Carbon\Carbon;
+use App\User;
 use Validator;
 use Storage;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 trait MainAble
 {
@@ -17,7 +20,35 @@ trait MainAble
     {
         $new_message = [];
         if ($this->is_sender_receiver($id_mail)) {
-            $mail = EmailInternal::find($id_mail);
+            $mail = EmailInternal::query()
+            ->with(
+                ['receiver' => function ($subQuery) { 
+                    // dd($subQuery->first());
+                    
+                    // $model = $subQuery->first()->sender_type;
+                    // $id_sender = $subQuery->first()->sender_id;
+                    // dd($model);
+                    // dd(User::class);
+                    // $abc = $subQuery->morphWith([
+                    //     User::class => 'sender_id'
+                    // ]);
+                    // dd($abc);
+                    // $id_sender = $subQuery->first()->sender_id;
+                    // $subQuery->where('id',2)->first();
+                    // $subQuery->morphWith([
+                    //     // 'sender' => \App\User::class
+                    // ]);
+                    // // dd($subQuery->first()->queryModel($model,$id_sender)->first());
+                    // // $subQuery = $subQuery->first()->queryModel("App\User",1)->first();
+
+                    // return $subQuery;
+                    // return $model::find($id_sender); 
+                    // dd($model::find($id_sender));
+                    // $this->morphOne($model, 'sender_id');
+                    // dd($this->morphOne($model, 'sender_id'));
+                }]
+            )->with('sender')
+            ->first();
             return json_decode($mail);
         }else{
             $new_message[] = "!is_sender_receiver";
@@ -30,12 +61,14 @@ trait MainAble
     {
         $mails = EmailInternal::where(function ($query) {
             $query->where('sender_id',$this->id)
-            ->where('model_sender',(string)get_class($this));
+            ->where('sender_type',(string)get_class($this));
         })
         ->orWhere(function ($query) {
             $query->where('receiver_id',$this->id)
-            ->where('model_receiver',(string)get_class($this));
+            ->where('receiver_type',(string)get_class($this));
         })
+        ->with('receiver')
+        ->with('sender')
         ->paginate($paginate, ['*'], 'page', $page);
 
         $response = [
@@ -277,28 +310,28 @@ trait MainAble
 
     }
 
-    public function mailto($receiver,$content,$subject,$file,$model_receiver="",$colunm_model="id")
+    public function mailto($receiver,$content,$subject,$file,$receiver_type="",$colunm_model="id")
     {
         $new_message = [];
         $type_receiver = gettype($receiver);
         // dd($type_receiver);
-        $model_sender = (string)get_class($this);
-        // dd($model_sender);
-        if (!empty($model_receiver)) {}else{
-            $model_receiver = $model_sender;
+        $sender_type = (string)get_class($this);
+        // dd($sender_type);
+        if (!empty($receiver_type)) {}else{
+            $receiver_type = $sender_type;
         }
         if ($type_receiver == "array") {
             for ($i=0; $i < count($receiver); $i++) {
-                $new_message[] = $this->newMail($this->id,$receiver[$i],$model_sender,$model_receiver,$content,$subject,$file,$colunm_model);
+                $new_message[] = $this->newMail($this->id,$receiver[$i],$sender_type,$receiver_type,$content,$subject,$file,$colunm_model);
             }
         }
 
         if ($type_receiver == "object") {
-            $new_message[] = $this->newMail($this->id,$receiver->id,$model_sender,(string)get_class($receiver),$content,$subject,$file,'id');
+            $new_message[] = $this->newMail($this->id,$receiver->id,$sender_type,(string)get_class($receiver),$content,$subject,$file,'id');
         }
 
         if ($type_receiver == "string" or $type_receiver == "integer") {
-            $new_message[] = $this->newMail($this->id,$receiver,$model_sender,$model_receiver,$content,$subject,$file,$colunm_model);
+            $new_message[] = $this->newMail($this->id,$receiver,$sender_type,$receiver_type,$content,$subject,$file,$colunm_model);
         }
 
         return $new_message;
@@ -384,7 +417,7 @@ trait MainAble
     public function mail_delete_force()
     {
         $new_message = [];
-        $update_sender = EmailInternal::where('sender_id',$this->id)->where('model_sender',(string)get_class($this))->where('status','<>',99)->get();
+        $update_sender = EmailInternal::where('sender_id',$this->id)->where('sender_type',(string)get_class($this))->where('status','<>',99)->get();
         
         if (count($update_sender) < 1) {
             // dd(count($update_sender));
@@ -397,7 +430,7 @@ trait MainAble
         }
 
 
-        $update_receiver = EmailInternal::where('receiver_id',$this->id)->where('model_receiver',(string)get_class($this))->where('status','<>',99)->get();
+        $update_receiver = EmailInternal::where('receiver_id',$this->id)->where('receiver_type',(string)get_class($this))->where('status','<>',99)->get();
         foreach ($update_receiver as $detail_update_receiver) {
             $detail_update_receiver->content = "Mail deleted";
             $detail_update_receiver->subject = "Mail deleted";
@@ -456,13 +489,13 @@ trait MainAble
     {
         $check_sender = EmailInternal::where('id',$id_mail)
         ->where('sender_id',$this->id)
-        ->where('model_sender',(string)get_class($this))
+        ->where('sender_type',(string)get_class($this))
         ->where('sender_read',$status)
         ->first();
 
         $check_receiver = EmailInternal::where('id',$id_mail)
         ->where('receiver_id',$this->id)
-        ->where('model_receiver',(string)get_class($this))
+        ->where('receiver_type',(string)get_class($this))
         ->where('receiver_read',$status)
         ->first();
 
@@ -477,12 +510,12 @@ trait MainAble
     {
         $check_sender = EmailInternal::where('id',$id_mail)
         ->where('sender_id',$this->id)
-        ->where('model_sender',(string)get_class($this))
+        ->where('sender_type',(string)get_class($this))
         ->first();
 
         $check_receiver = EmailInternal::where('id',$id_mail)
         ->where('receiver_id',$this->id)
-        ->where('model_receiver',(string)get_class($this))
+        ->where('receiver_type',(string)get_class($this))
         ->first();
 
         if (!empty($check_sender) or !empty($check_receiver)) {
@@ -496,7 +529,7 @@ trait MainAble
     {
         $check = EmailInternal::where('id',$id_mail)
         ->where('sender_id',$this->id)
-        ->where('model_sender',(string)get_class($this))
+        ->where('sender_type',(string)get_class($this))
         ->first();
 
         if (!empty($check)) {
@@ -506,19 +539,19 @@ trait MainAble
         }
     }
 
-    public function newMail($sender_id,$receiver_data,$model_sender,$model_receiver,$content,$subject,$file,$colunm_model)
+    public function newMail($sender_id,$receiver_data,$sender_type,$receiver_type,$content,$subject,$file,$colunm_model)
     {
-        // dd($sender_id,$receiver_data,$model_sender,$model_receiver,$content,$subject,$file,$colunm_model);
-        $check_model_try = is_subclass_of($model_receiver, 'Illuminate\Database\Eloquent\Model');
+        // dd($sender_id,$receiver_data,$sender_type,$receiver_type,$content,$subject,$file,$colunm_model);
+        $check_model_try = is_subclass_of($receiver_type, 'Illuminate\Database\Eloquent\Model');
 
         if ($check_model_try) {
-            $model_receiver_try = $model_receiver::where($colunm_model,$receiver_data)->first();
+            $model_receiver_try = $receiver_type::where($colunm_model,$receiver_data)->first();
             if (!empty($model_receiver_try)) {
                 $new_mail = new EmailInternal;
                 $new_mail->sender_id = $sender_id;
                 $new_mail->receiver_id = $model_receiver_try->id;
-                $new_mail->model_sender = $model_sender;
-                $new_mail->model_receiver = $model_receiver;
+                $new_mail->sender_type = $sender_type;
+                $new_mail->receiver_type = $receiver_type;
                 $new_mail->content = $content;
                 $new_mail->subject = $subject;
                 $new_mail->file = $file;
