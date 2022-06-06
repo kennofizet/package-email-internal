@@ -6,6 +6,7 @@ install :
   + php artisan migrate
   ```
 use : v2
+```
   $model->
           mail_news_active($limit = 6,$page = 1,$colunm_sort="updated_at",$order_by="DESC",$relationship_sender=[]);
           count_mail_news_active();
@@ -51,7 +52,7 @@ use : v2
           newMail($sender_id,$receiver_data,$sender_type,$receiver_type,$content,$subject,$file,$colunm_model);
           newMailReply($sender_id,$sender_type,$content,$mail_id,$timestamp_status=true);
           updateMail($content,$subject,$file,$id_mail);
-  
+```
 use : v1
   ```
   //send mail
