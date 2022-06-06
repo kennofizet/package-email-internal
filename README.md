@@ -4,6 +4,8 @@ install :
   ```
   + composer require kennofizet/email-internal
   + php artisan migrate
+  + use Package\Kennofizet\EmailInternal\Traits\MainAble as EmailInternal; // model
+  + use EmailInternal;
   ```
 use : v2
 ```
