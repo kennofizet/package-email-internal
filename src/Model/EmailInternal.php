@@ -10,12 +10,13 @@ class EmailInternal extends Model
 
     protected $table = "email_internal";
     public $timestamps = true;
-    protected $fillable = ['subject', 'content','file','model','sender_id','receiver_id'];
+    protected $fillable = ['subject', 'content','file','sender_type', 'receiver_type','sender_id','receiver_id','token','status','sender_read','sender_trash','sender_star','receiver_read','receiver_trash','receiver_star'];
 
-    public function gallery_file()
+    public function files()
     {
         return $this->hasMany('Package\Kennofizet\EmailInternal\Model\EmailInternalGallery','mail_id','id');
     }
+
     public function sender()
     {
         return $this->morphTo();
@@ -23,6 +24,16 @@ class EmailInternal extends Model
     public function receiver()
     {
         return $this->morphTo();
+    }
+
+    public function test($value='')
+    {
+        return $this->with($value);
+    }
+
+    public function mail_reply()
+    {
+        return $this->hasMany('Package\Kennofizet\EmailInternal\Model\EmailReplyInternal','mail_id','id')->orderBy('id','DESC')->with('files');
     }
 
     public function settingable() {
@@ -37,5 +48,6 @@ class EmailInternal extends Model
     {
         return $model::find($id);
     }
+
 
 }

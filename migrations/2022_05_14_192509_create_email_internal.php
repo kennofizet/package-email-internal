@@ -22,9 +22,17 @@ class CreateEmailInternal extends Migration
             $table->string('receiver_type',255);
             $table->bigInteger('sender_id');
             $table->bigInteger('receiver_id');
+            $table->longText('token');
+
+            
             $table->tinyInteger('status')->default(1);
             $table->tinyInteger('sender_read')->default(1);
+            $table->tinyInteger('sender_trash')->default(1);
+            $table->tinyInteger('sender_star')->default(0);
             $table->tinyInteger('receiver_read')->default(1);
+            $table->tinyInteger('receiver_trash')->default(1);
+            $table->tinyInteger('receiver_star')->default(0);
+            
             $table->timestamps();
         });
     }
